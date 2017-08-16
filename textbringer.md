@@ -77,131 +77,56 @@
 * キー操作一覧
     * F1 bまたはM-x describe_bindings
 
-## なぜRubyでテキストエディタを作るか
+## Rubyで作ってよかったこと
 
-* 拡張性
+* そこそこ作りやすかった
+* 一通り作った後も弄りやすい
 
-## テキストエディタは環境
+## 具体例
 
-## 不満
+* バッファ
+* 再表示
+* コマンド定義
 
-* Emacs Lisp
-* Vim script
-* **Ruby**を使いたい
+## バッファ
 
-## Past work
+* 編集対象のテキストを表すデータ構造
+* 主な要素
+    * テキストの内容
+    * 現在の編集位置(point)
+    * コピー操作のしてんなどに使う位置(mark)
 
-* ruby-jed
-* if_ruby for Vim
+## 代表的実装方式
 
-## JED
+* ギャップバッファ
+    * Emacs
+* 行の連結リスト
+    * JED
 
-* The JED Programmer's Editor
-* S-Lang
-    * curses的なライブラリに独自言語の抱き合わせ
-* Emacsエミュレーション
+## ギャップバッファ
 
-## ruby-jed
+* ギャップ（隙間）の空いた文字列を用意する
 
-```ruby
-def ruby_shell
-  if buf = Buffer.find($ruby_shell_buffer)
-    end_of_buffer
-  else
-    buf = Buffer.new($ruby_shell_buffer)
-  end
-  buf.show
-  set_mode($ruby_shell_mode_name, LANGUAGE_MODE)
-  use_keymap($ruby_shell_mode_name)
-  use_syntax_table($ruby_mode_name)
-  run_hooks(:ruby_shell_mode_hook)
-  insert $curbuf.ruby_prompt
-end
-```
+      0 1 2 3 4 5 6 7 8           9 10
+      ---------------------------------
+      |h|e|l|l|o| |w|o| | | | | |r|l|d|
+      ---------------------------------
 
-## Vim
+* 文字を挿入する時はpoint位置にギャップを移動
+* 同じ位置に文字を挿入する場合は移動が不要
 
-* Vi IMproved
-* Tcl/Perl/Pythonなどのインタフェイス
+## 行の連結リスト
 
-## if_ruby
+* 行の双方向リスト
+* 新しい行はリストの適切な位置に挿入される
 
-```ruby
-print "Hello"
-VIM.command(cmd)
-num = VIM::Window.count
-w = VIM::Window[n]
-cw = VIM::Window.current
-num = VIM::Buffer.count
-b = VIM::Buffer[n]
-cb = VIM::Buffer.current
-w.height = lines
-w.cursor = [row, col]
-pos = w.cursor
-name = b.name
-line = b[n]
-num = b.count
-b[n] = str
-b.delete(n)
-b.append(n, str)
-line = VIM::Buffer.current.line
-num = VIM::Buffer.current.line_number
-VIM::Buffer.current.line = "test"
-```
+## 採用方式
 
-## これで解決？
-
-* 結局あまり使わなかった
-* 主言語とのインピーダンス・ミスマッチ
-    * パラダイム・データ型などの違い
-* 拡張性の低さ
-    * 拡張を想定している部分しか拡張できない
-
-## Rubyでエディタを作ろう
-
-
-## 開発方針
-
-* ユーザインタフェイス
-* バッファの内部表現
-* 拡張性
-
-## ユーザインタフェイス
-
-* Text User Interface
-    * curses
-    * Windows、Macでも動く (たぶん)
-* Emacs風
-    * キーバインディング
-    * コマンド体系
-
-## なぜEmacs風なのか
-
-* 拡張性
-    * MUAを実装してEmacsを捨てたい
-    * 混沌を倒すには混沌の力が必要
-* Cosmic Balance
-    * Vimへの転向者が多い
-
-## Emacsとの違い
-
-* redoがundoと別コマンド
-* ctags使用
-    * ripper-tagsを拡張したtbtagsコマンドを用意
-* M-* / M-? でglobal-mark-ringを前後に移動
-* 一行ずつスクロール
-    * (setq scroll-conservatively 1) 相当
-    
-## バッファの内部表現
-
-* 一つのStringオブジェクト
-* バッファギャップ方式
-    * 例: "hello world"の"r"の直前が挿入位置の場合
-
-          0 1 2 3 4 5 6 7 8           9 10
-          ---------------------------------
-          |h|e|l|l|o| |w|o| | | | | |r|l|d|
-          ---------------------------------
+* Stringを使ったギャップバッファ
+* 理由
+    * 組み込みクラスの高速なメソッドを活かせる
+    * 行をまたいだ検索などの処理が実装しやすい
+    * オブジェクトの数が少なくて済む
 
 ## 文字コード
 
@@ -233,68 +158,6 @@ VIM::Buffer.current.line = "test"
 * UTF-8のバイト列をASCII-8BITで保持
 * バッファ上の位置はバイト単位で扱う
 * 必要に応じてUTF-8にforce_encoding
-
-## つらい
-
-```ruby
-def byteindex(forward, re, pos)
-  @match_offsets = []
-  method = forward ? :index : :rindex
-  adjust_gap(0, point_max)
-  if @binary
-    offset = pos
-  else
-    offset = @contents[0...pos].force_encoding(Encoding::UTF_8).size
-    @contents.force_encoding(Encoding::UTF_8)
-  end
-  begin
-    i = @contents.send(method, re, offset)
-    if i
-      m = Regexp.last_match
-      if m.nil?
-        # A bug of rindex
-        @match_offsets.push([pos, pos])
-        pos
-      else
-        b = m.pre_match.bytesize
-        e = b + m.to_s.bytesize
-        if e <= bytesize
-          @match_offsets.push([b, e])
-          match_beg = m.begin(0)
-          match_str = m.to_s
-          (1 .. m.size - 1).each do |j|
-            cb, ce = m.offset(j)
-            if cb.nil?
-              @match_offsets.push([nil, nil])
-            else
-              bb = b + match_str[0, cb - match_beg].bytesize
-              be = b + match_str[0, ce - match_beg].bytesize
-              @match_offsets.push([bb, be])
-            end
-          end
-          b
-        else
-          nil
-        end
-      end
-    else
-      nil
-    end
-  ensure
-    @contents.force_encoding(Encoding::ASCII_8BIT)
-  end
-end
-```
-
-## Feature #13110
-
-```ruby
-s = "あああいいいあああ"
-p s.byteindex(/ああ/, 4) #=> 18
-x, y = Regexp.last_match.byteoffset(0) #=> [18, 24]
-s.bytesplice(x...y, "おおお")
-p s #=> "あああいいいおおおあ"
-```
 
 ## 拡張性
 
