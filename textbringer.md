@@ -48,7 +48,7 @@
 
 ## 特徴
 
-* ほぼEmacs
+* Emacs風
 * 端末上で動く
     * 端末上でしか動かない
 * Pure Ruby
@@ -86,7 +86,7 @@
 
 * バッファ
 * 再表示
-* コマンド定義
+* 拡張
 
 ## バッファ
 
@@ -173,17 +173,28 @@
 * Curses::Window#eraseでウィンドウの内容を消去
 * Curses.doupdateで必要な箇所だけ再表示される
 
-## 拡張性
+## 拡張
 
-* Pure Ruby
-    * Rubyの動的特徴を活かす
-* やろうと思えば表示コードも拡張できる
+* Rubyの動的特徴を活かす
 
-## プラグイン
+## Rubyコードの実行
 
-* Gemとして実装
-    * `gem install textbringer-presentation`
-* lib/textbringer_plugin.rbがロードされる
+* eval_expression
+* eval_buffer
+* eval_region
+
+## eval_expression
+
+* ミニバッファで入力したコードを実行
+* 評価結果をエコーエリアに表示
+
+## eval_buffer
+
+* バッファの内容をRubyコードとして実行
+
+## eval_region
+
+* 選択された領域の内容をRubyコードとして実行
 
 ## コマンド定義
 
@@ -222,9 +233,79 @@ class ProgrammingMode < FundamentalMode
   end
 ```
 
-## 今後の構想
+## プラグイン
 
-* バックグラウンド処理
-* MUA
+* lib/textbringer_plugin.rbがロードされる
+* gemとしてインストール
+    * `gem install textbringer-presentation`
+* あるいは~/.textbringer/plugins以下に置く
 
+## プラグインの例
+
+* GhostTextプラグイン
+    * ブラウザ上のテキストエリアを編集
+
+## GhostTextプロトコル
+
+* WebSocketで以下のようなJSONを送受信
+
+      {
+        "text": "hello world",
+        "selections": [{"start": 0, "end": 0}],
+        "title": "test",
+        "url": "example.com",
+        "syntax": ""
+      }
+
+## デモ
+
+## サーバ起動コマンド
+
+```ruby
+define_command(:ghost_text_start,
+               doc: "Start GhostText server") do
+  host = CONFIG[:ghost_text_host]
+  port = CONFIG[:ghost_text_port]
+  message("Start GhostText server: http://#{host}:#{port}")
+  background do
+    thin = Rack::Handler.get("thin")
+    app = Rack::ContentLength.new(Textbringer::GhostText::Server.new)
+    thin.run(app, Host: host, Port: port) do |server|
+      server.silent = true
+    end
+  end
+end
+```
+
+## テキストの同期
+
+```ruby
+syncing_from_remote_text = false
+
+ws.on :message do |event|
+  data = JSON.parse(event.data)
+  next_tick do
+    syncing_from_remote_text = true
+    begin
+      buffer.replace(data["text"])
+      if pos = data["selections"]&.dig(0, "start")
+        byte_pos = data["text"][0, pos].bytesize
+        buffer.goto_char(byte_pos)
+      end
+    ensure
+      syncing_from_remote_text = false
+    end
+    if (title = data['title']) && !title.empty?
+      buffer.name = "*GhostText:#{title}*"
+    end
+    switch_to_buffer(buffer)
+  end
+end
+```
+
+## 詳細
+
+* GhostTextプラグインの作成 - NaCl非公式ブログ
+    * http://nacl-ltd.github.io/2017/07/08/textbringer-ghost_text.html
+        
 ## END
