@@ -221,6 +221,12 @@ buffer.replace_match("Tochigi")
 
 * 選択された領域の内容をRubyコードとして実行
 
+## 警告の抑止
+
+```ruby
+$VERBOSE = nil
+```
+
 ## コマンド定義
 
 ```ruby
