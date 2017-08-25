@@ -63,7 +63,7 @@
 
 ## 終了
 
-* Ctrl+X、Ctrl+Cを続けて押す
+* Ctrl-X、Ctrl-Cを続けて押す
 * Emacsと同じ
 
 ## デモ
@@ -174,7 +174,7 @@ buffer.replace_match("Tochigi")
 
 * UTF-8のバイト列をASCII-8BITで保持
 * バッファ上の位置はバイト単位で扱う
-    * 昔のXEmacsがそうだったような…
+    * 昔のXEmacsがそうだったような
 * 必要に応じてUTF-8にforce_encoding
 
 ## Stringはバッファ向き?
@@ -182,7 +182,7 @@ buffer.replace_match("Tochigi")
 * ランダムアクセスをあまり考慮していない
     * 先頭からシーケンシャルに処理する用途が多い
 * やや無理をして使っている
-* それでも自前で頑張るより速いのでは…
+* それでも自前でRubyのコードを書くより速いのでは…
 
 ## 再表示
 
@@ -197,6 +197,15 @@ buffer.replace_match("Tochigi")
     * 自作のgemで以前は標準添付だった
 * Curses::Window#eraseでウィンドウの内容を消去
 * Curses.doupdateで必要な箇所だけ再表示される
+
+## つらいところ
+
+* マルチバイト文字の表示幅
+* unicode-display_widthというgemを利用
+* 端末によって同じ文字の幅が違う（記号など）
+* `CONFIG[:east_asian_ambiguous_width]` で設定
+* それでも表示がおかしくなる場合
+    * Ctrl-L (M-x recenter)
 
 ## 拡張
 
@@ -358,7 +367,7 @@ end
     * ちょっとしたtypoで動かなくなる
     * 開発初期はよくVimに切り替えた
 
-## Rubyとは
+## つまり
 
 * 混沌
 
