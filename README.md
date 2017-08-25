@@ -1,4 +1,4 @@
-# Text Editing in Ruby
+# Rubyでつくるテキストエディタ
 
 とちぎRuby会議07のための[発表資料](textbringer.md)です。
 

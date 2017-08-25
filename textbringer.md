@@ -18,6 +18,14 @@
 * https://github.com/shugo/textbringer
 * このスライドを表示しているもの
 
+## 特徴
+
+* Emacs風
+* 端末上で動く
+    * 端末上でしか動かない
+* Pure Ruby
+* 名前がかっこいい
+
 ## 名前の由来
 
 ![Stormbringer](stormbringer.jpg)
@@ -46,13 +54,6 @@
 
 ![Balance](balance.png)
 
-## 特徴
-
-* Emacs風
-* 端末上で動く
-    * 端末上でしか動かない
-* Pure Ruby
-
 ## インストール
 
     $ gem install textbringer
@@ -68,6 +69,9 @@
 
 ## デモ
 
+```ruby
+```
+
 ## ヘルプ
 
 * 特定のコマンド
@@ -81,7 +85,7 @@
 
 * 簡単に作れた
 * 作った後も弄りやすい
-* Ruby意外と速い
+* 意外と速い
 
 ## 具体例
 
@@ -128,8 +132,7 @@ buffer.replace_match("Tochigi")
       ---------------------------------
 
 * 文字を挿入する時はpoint位置にギャップを移動
-* 同じ位置に文字を挿入する場合は移動が不要
-* いくつかのバリエーション
+* バリエーション
     * 複数ページに分割
     * 末尾にもギャップをもつ
 
@@ -144,15 +147,15 @@ buffer.replace_match("Tochigi")
 ## Pure Ruby?
 
 * 組み込みクラスはCで書いてある
-* コミッタの人が頑張って高速化している
-* 自分で頑張るより速い
+* コミッタが頑張って高速化している
+* 多くの場合、自分でRubyで実装するより速い
 
-## 文字コード
+## バッファ内部の文字コード
 
 * US-ASCII
-    * 日本語が使えなくてつらい
+    * 日本語が使えない
 * UTF-32LE/BE
-    * 文字列リテラルが使えなくてつらい
+    * source encodingにできない
 * UTF-8
     * 採用
 
@@ -200,7 +203,7 @@ buffer.replace_match("Tochigi")
 
 ## つらいところ
 
-* マルチバイト文字の表示幅
+* 文字の表示幅
 * unicode-display_widthというgemを利用
 * 端末によって同じ文字の幅が違う（記号など）
 * `CONFIG[:east_asian_ambiguous_width]` で設定
@@ -214,26 +217,17 @@ buffer.replace_match("Tochigi")
 ## Rubyコードの実行
 
 * eval_expression
+    * ミニバッファで入力したコードを実行
+    * 評価結果をエコーエリアに表示
 * eval_buffer
+    * バッファの内容をRubyコードとして実行
 * eval_region
-
-## eval_expression
-
-* ミニバッファで入力したコードを実行
-* 評価結果をエコーエリアに表示
-
-## eval_buffer
-
-* バッファの内容をRubyコードとして実行
-
-## eval_region
-
-* 選択された領域の内容をRubyコードとして実行
+    * 選択された領域の内容をRubyコードとして実行
 
 ## 警告の抑止
 
 ```ruby
-$VERBOSE = nil
+$VERBOSE = nil  # 定数の再定義などの警告を抑止
 ```
 
 ## コマンド定義
@@ -242,10 +236,10 @@ $VERBOSE = nil
 define_command(:fizzbuzz,
                doc: "Do FizzBuzz from 1 to n.") do
  |n = number_prefix_arg|
-  (1..n).each do |i|
+  1.upto(n) do |i|
     insert ["Fizz"][i%3]
     insert ["Buzz"][i%5]
-    insert i if beginning_of_line?
+    insert [i][Buffer.current.current_column-1]
     newline
   end
 end
@@ -322,11 +316,9 @@ define_command(:ghost_text_start,
 end
 ```
 
-## テキストの同期
+## ブラウザ→エディタの同期
 
 ```ruby
-syncing_from_remote_text = false
-
 ws.on :message do |event|
   data = JSON.parse(event.data)
   next_tick do
@@ -344,6 +336,20 @@ ws.on :message do |event|
       buffer.name = "*GhostText:#{title}*"
     end
     switch_to_buffer(buffer)
+  end
+end
+```
+# エディタ→ブラウザの同期
+
+```ruby
+buffer.on :modified do
+  unless syncing_from_remote_text
+    pos = buffer.substring(0, buffer.point).size
+    data = {
+      "text" => buffer.to_s,
+      "selections" => [{ "start" => pos, "end" => pos }]
+    }
+    ws&.send(data.to_json)
   end
 end
 ```
