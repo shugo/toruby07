@@ -129,6 +129,7 @@ buffer.replace_match("Tochigi")
     * 実装例: vi
 * ギャップバッファ
     * 実装例: Emacs
+* 参考: The Craft of Text Editing
 
 ## 行の連結リスト
 
@@ -202,7 +203,8 @@ buffer.replace_match("Tochigi")
 
 ## 再表示
 
-* 画面全体を再表示する必要はない
+* 変更があった部分だけ再表示したい
+    * 遅い端末とか
 * しかし、実装が面倒
 * cursesの機能を使う
 
